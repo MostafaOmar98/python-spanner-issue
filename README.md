@@ -43,7 +43,7 @@ Note: The mention of _steady flow of request_ is because if there hasn't been an
 
 ## Proposed solutions:
 
-1- Have `PingingPool` keep track of session creation time, add an extra check to `ping` to make it go through if sessions are >= 28 days old  
+1- Have `PingingPool` keep track of session creation time, add an extra check to `get` to check/replace session if sessions are >= 28 days old  
    This will cover the case of spanner deleting old sessions, but will not cover the general case of server-side deletions.  
    However, it seems that the only other case is manual deletion of a session (who does that?). So if you're going to manually delete a session, might as well manually refresh your pool. Hence, this is my suggested solution  
    
