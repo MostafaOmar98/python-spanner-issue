@@ -9,7 +9,7 @@ Currently google cloud spanner deletes sessions from the server side for the fol
 2) The Cloud Spanner database service can delete a session when the session is idle for more than 1 hour.
 3) The Cloud Spanner database service may delete a session if the session is more than 28 days old.
 
-Using `PingingPool` mainly protects the library user from (2) but does not cover (1) & does not cover (3) in case there is a constant flow of requests to the pool.  
+Using `PingingPool` mainly protects the library user from (2) but does not cover (1) & does not cover (3) in case there is a steady flow of requests to the pool.  
 I'm mostly concerned with (3) though.
 
 ## Issue reason:
@@ -29,7 +29,7 @@ Assume you have a `PingingPool` of size 1. The session in this pool has been act
 Here is what happens when client attempts to use the deleted session
 
 **Client:** Request a session from the pool  
-**PingingPool:** Returns the deleted session (unaware that it was deleted since there are no checks on existence at get time)  
+**PingingPool:** Returns the deleted session (unaware that it was deleted since there are no checks on existence at get time if the `ping_after` time didn't get surpassed)  
 **Client:** Attempts to use the deleted session, receives `404 Session NotFound`, gracefully returns the session to the pool (Client doesn't differentiate between `Session NotFound` errors and any other errors)  
 **PingingPool:** Puts the deleted session back into the pool, **refreshes the `ping_after` timestamp**, making future `ping` attempts useless since from the pool's POV, the session was recently used.  
 
@@ -37,9 +37,9 @@ All of that while our background thread desperately trying to ping the pool, but
 
 ## Victims of this issues:
 
-Long runnning deployments using `PingingPool` where there is a constant flow of requests.  
+Long runnning deployments using `PingingPool` where there is a steady flow of requests.  
 
-Note: The mention of _constant flow of request_ is because if there hasn't been any requests to the `PingingPool` for the duration of the `ping_interval`, `PingingPool`'s ping will actually go through, and will replace deleted session with a new one
+Note: The mention of _steady flow of request_ is because if there hasn't been any requests to the `PingingPool` for the duration of the `ping_interval`, `PingingPool`'s ping will actually go through, and will replace deleted session with a new one
 
 ## Proposed solutions:
 
